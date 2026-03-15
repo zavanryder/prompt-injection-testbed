@@ -1,0 +1,10 @@
+[project]
+name = "chat-completions"
+version = "0.1.0"
+description = "Simple Chat Completions CLI for testing prompt injection"
+requires-python = ">=3.10"
+dependencies = [
+    "litellm",
+    "python-dotenv",
+    "httpx",
+]
