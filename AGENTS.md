@@ -14,8 +14,8 @@ providers (OpenAI, Anthropic, Google, Groq, OpenRouter, Ollama).
 - `skills/injection-payloads/` -- Agentic Skill containing the text payload dictionary
   in `references/payloads.yaml`. Payloads are never hardcoded in Python.
 - `skills/multimodal-payloads/` -- Agentic Skill containing multimodal injection
-  test files (images, PDFs) with hidden/invisible injection text in
-  `references/manifest.yaml`.
+  test files (images, PDFs, audio, video) with hidden/invisible injection text
+  in `references/manifest.yaml`.
 - `reports/` -- generated markdown reports with timestamped filenames.
 
 ## Agent roles
@@ -63,10 +63,14 @@ skills/
       payloads.yaml         Categorized payload dictionary
   multimodal-payloads/
     SKILL.md                Multimodal skill metadata
+    scripts/
+      generate_multimodal.py  Regenerates all test files
     references/
-      manifest.yaml         Image/PDF payload manifest
+      manifest.yaml         Image/PDF/audio/video payload manifest
       images/               Hidden-text injection PNGs
       pdfs/                 Injection PDFs
+      audio/                Injection WAV files (morse, ultrasonic)
+      video/                Injection animated GIFs
 reports/                    Generated test reports
 ```
 

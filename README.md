@@ -378,9 +378,12 @@ skills/injection-payloads/
   |
 skills/multimodal-payloads/
   |-- SKILL.md                  Multimodal skill docs
+  |-- scripts/generate_multimodal.py  Regenerates all test files
   |-- references/manifest.yaml  Image/PDF payload manifest
   |-- references/images/        Hidden-text injection images (PNG)
   |-- references/pdfs/          Injection PDFs (invisible text, hidden layers)
+  |-- references/audio/         Injection WAV files (morse, ultrasonic)
+  |-- references/video/         Injection animated GIFs
   |
 test-apps/
   |-- chat-completions/         Interactive CLI chat client

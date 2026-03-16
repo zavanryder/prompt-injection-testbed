@@ -1,14 +1,7 @@
 #!/usr/bin/env python3
 """Prompt Injection Testbed -- minimal framework for testing LLM injection resilience."""
 
-import argparse
-import asyncio
-import base64
-import json
-import os
-import re
-import sys
-import time
+import argparse, asyncio, base64, json, os, re, sys, time
 from datetime import datetime
 from pathlib import Path
 
@@ -173,7 +166,9 @@ async def run_single(target, url, http_client, evaluator, reviewer, payload, cat
         eval_inj = verdict.get("injected")
         final_injected = (not rv_inj) if rv_inj is not None and eval_inj is not None and rv_inj == eval_inj else rv_inj
     return {**base, "response": response, "eval_injected": verdict.get("injected"),
-        "injected": final_injected, "confidence": rv.get("confidence", 0) if not agreed else verdict.get("confidence", 0),
+        "injected": final_injected,
+        "eval_confidence": verdict.get("confidence", 0),
+        "confidence": rv.get("confidence", 0) if not agreed else verdict.get("confidence", 0),
         "evidence": verdict.get("evidence", ""),
         "review_agree": agreed, "review_explanation": rv.get("explanation", "")}
 
@@ -342,8 +337,9 @@ def generate_report(results, model_label, commands, output_dir="reports"):
         if not r.get("error"):
             ev = _status({"injected": r.get("eval_injected")})
             rv = "Agreed" if r.get("review_agree") else "Overrode"
-            lines += [f"**Evaluator:** {ev} (confidence: {r.get('confidence','-')}) -- {r.get('evidence','')}",
-                      f"**Reviewer:** {rv} -- {r.get('review_explanation','')}", ""]
+            ec = r.get("eval_confidence", r.get("confidence", "-"))
+            lines += [f"**Evaluator:** {ev} (confidence: {ec}) -- {r.get('evidence','')}",
+                      f"**Reviewer:** {rv} (confidence: {r.get('confidence','-')}) -- {r.get('review_explanation','')}", ""]
 
     path.write_text("\n".join(lines))
     return str(path)

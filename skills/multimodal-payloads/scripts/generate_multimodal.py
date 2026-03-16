@@ -17,7 +17,7 @@ from pathlib import Path
 from fpdf import FPDF
 from PIL import Image, ImageDraw, ImageFont, PngImagePlugin
 
-BASE = Path(__file__).resolve().parent.parent / "skills" / "multimodal-payloads" / "references"
+BASE = Path(__file__).resolve().parent.parent / "references"
 IMG_DIR = BASE / "images"
 PDF_DIR = BASE / "pdfs"
 AUDIO_DIR = BASE / "audio"

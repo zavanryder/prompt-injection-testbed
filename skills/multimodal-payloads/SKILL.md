@@ -15,7 +15,7 @@ A collection of generated test files that embed prompt injection text in visual,
 document, audio, and video channels. Every file is produced locally with Pillow,
 fpdf2, and Python stdlib -- nothing is downloaded from the internet.
 
-Regenerate all files with: `uv run python scripts/generate_multimodal.py`
+Regenerate all files with: `uv run python skills/multimodal-payloads/scripts/generate_multimodal.py`
 
 ## Payload categories
 
