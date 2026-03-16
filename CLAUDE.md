@@ -30,6 +30,9 @@ uv run python testbed.py --model openai/gpt-4.1 --categories all
   works directly on `result.final_output`.
 - Payload loading reads YAML once per run; categories are filtered in Python.
 - Report filenames follow `{timestamp}_{model}_injection-report.md`.
+- When the reviewer disagrees but echoes the evaluator's `injected` boolean
+  (common with small LLMs), the override logic flips the value. Both sides
+  must be non-None for the flip to trigger.
 
 ## Testing
 

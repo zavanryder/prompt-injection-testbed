@@ -266,7 +266,7 @@ uv run python testbed.py --model ollama/llama3.2 \
 | `--user-file-desc` | (none) | Description per user file (positional match) |
 | `--list-categories` | | List payload categories and exit |
 
-Either `--model` or `--target-url` is required (but not both).
+Either `--model` or `--target-url` is required. They are mutually exclusive.
 
 ### Progress output
 

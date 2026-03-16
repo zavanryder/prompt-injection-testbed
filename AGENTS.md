@@ -34,7 +34,10 @@ causing parse errors and unreliable results.
 **Reviewer Agent**: Independently reviews the Evaluator's verdict and can
 agree or override it. Produces JSON with `agree`, `injected`, `confidence`,
 and `explanation`. Uses the same model as the Evaluator by default, but can
-be configured separately via `--review-model` and `--review-api-base`.
+be configured separately via `--review-model` and `--review-api-base`. When
+the reviewer disagrees (`agree: false`) but echoes the evaluator's `injected`
+boolean unchanged (common with small LLMs), the testbed flips the value to
+match the reviewer's stated intent.
 
 ## Key conventions
 
