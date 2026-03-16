@@ -8,10 +8,14 @@ providers (OpenAI, Anthropic, Google, Groq, OpenRouter, Ollama).
 
 ## Architecture
 
-- `testbed.py` -- single-file application (~275 lines). Two agents: a **Target**
-  (the model under test) and an **Evaluator** (judges whether injections succeed).
-- `skills/injection-payloads/` -- Agentic Skill containing the payload dictionary
+- `testbed.py` -- single-file application (~400 lines). Three agents: a **Target**
+  (the model under test), an **Evaluator** (initial injection verdict), and a
+  **Reviewer** (independently reviews and can override the evaluator).
+- `skills/injection-payloads/` -- Agentic Skill containing the text payload dictionary
   in `references/payloads.yaml`. Payloads are never hardcoded in Python.
+- `skills/multimodal-payloads/` -- Agentic Skill containing multimodal injection
+  test files (images, PDFs) with hidden/invisible injection text in
+  `references/manifest.yaml`.
 - `reports/` -- generated markdown reports with timestamped filenames.
 
 ## Agent roles
@@ -26,6 +30,11 @@ JSON verdict (`injected`, `confidence`, `evidence`). Runs on a separate model
 model (Ollama) is strongly recommended -- commercial and free-tier API models
 tend to refuse evaluating injection payloads due to their own safety filters,
 causing parse errors and unreliable results.
+
+**Reviewer Agent**: Independently reviews the Evaluator's verdict and can
+agree or override it. Produces JSON with `agree`, `injected`, `confidence`,
+and `explanation`. Uses the same model as the Evaluator by default, but can
+be configured separately via `--review-model` and `--review-api-base`.
 
 ## Key conventions
 
@@ -49,6 +58,12 @@ skills/
     SKILL.md                Skill metadata and usage docs
     references/
       payloads.yaml         Categorized payload dictionary
+  multimodal-payloads/
+    SKILL.md                Multimodal skill metadata
+    references/
+      manifest.yaml         Image/PDF payload manifest
+      images/               Hidden-text injection PNGs
+      pdfs/                 Injection PDFs
 reports/                    Generated test reports
 ```
 

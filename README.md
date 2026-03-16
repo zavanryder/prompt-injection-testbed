@@ -8,17 +8,24 @@ against LLM applications and agents. Built on the
 ## What it does
 
 The testbed sends injection-laden prompts to a target model (or HTTP endpoint)
-and uses a separate evaluator agent to judge whether each attack succeeded. It
-produces a markdown report with per-category breakdowns, success rates, and
-evidence for each verdict.
+and uses a dual-agent evaluation pipeline to judge whether each attack
+succeeded. An **Evaluator** agent makes the initial call, then a **Reviewer**
+agent independently assesses the verdict and can override it. Reports include
+per-category breakdowns, success rates, and reasoning from both agents.
 
-Two testing modes are supported:
+Three testing modes are supported:
 
 1. **Direct model testing** -- specify any LLM by its LiteLLM identifier and
    the testbed handles the API calls.
 2. **Endpoint testing** -- point the testbed at a running chat application's
    HTTP API and it sends injection payloads through the application's own
    interface.
+3. **Multimodal testing** -- send images and PDFs containing hidden injection
+   text (invisible to humans, potentially readable by VLMs) to vision-capable
+   models.
+
+Users can also supply their own files via `--user-file` for both text-based and
+multimodal injection testing.
 
 ## Supported models
 
@@ -70,12 +77,12 @@ The testbed resolves keys in this order:
 Provider-specific variables (`ANTHROPIC_API_KEY`, `GROQ_API_KEY`, etc.) are
 read by LiteLLM automatically when set.
 
-### Choosing an evaluator model
+### Choosing evaluator and reviewer models
 
-The evaluator model judges whether each injection attack succeeded. This
-requires the model to analyze adversarial prompts and reason about whether
-safety boundaries were violated. **A locally-hosted model (e.g. Ollama) is
-strongly recommended for the evaluator.**
+The evaluator and reviewer models judge whether each injection attack
+succeeded. This requires the models to analyze adversarial prompts and reason
+about whether safety boundaries were violated. **Locally-hosted models (e.g.
+Ollama) are strongly recommended.**
 
 Commercial API models and free-tier hosted models tend to fail as evaluators
 because their own safety filters flag the injection payloads as harmful content.
@@ -96,7 +103,14 @@ Good evaluator choices include:
 
 # Remote Ollama instance
 --eval-model ollama/qwen2.5:7b --eval-api-base http://192.168.1.50:11434
+
+# Separate reviewer model
+--review-model ollama/phi4-mini:latest --review-api-base http://192.168.1.50:11434
 ```
+
+By default, the reviewer uses the same model and base URL as the evaluator.
+Use `--review-model` and `--review-api-base` to run a different model as the
+reviewer for independent verification.
 
 If you must use a commercial model as evaluator, `openai/gpt-4.1-mini` has the
 best track record, but expect some evaluation failures on aggressive payload
@@ -178,6 +192,41 @@ function if your API differs.
 The testbed passes `?stateless=true` so each request is evaluated
 independently without conversation history buildup.
 
+### Test with multimodal payloads
+
+```bash
+# Include multimodal hidden-text image attacks against a vision model
+uv run python testbed.py --model ollama/llava:latest \
+  --api-base http://192.168.1.50:11434 \
+  --categories instruction_override --max-per-cat 2 \
+  --multimodal --mm-categories hidden_text_images --mm-contexts describe
+
+# All multimodal categories
+uv run python testbed.py --model openai/gpt-4.1 \
+  --multimodal --mm-categories all --mm-contexts describe,analyze_doc,extract
+```
+
+### Test with user-supplied files
+
+```bash
+# Supply a custom image file
+uv run python testbed.py --model ollama/llava:latest \
+  --api-base http://192.168.1.50:11434 \
+  --user-file my_image.png --user-file-desc "Custom steganographic payload"
+
+# Supply a text file as an injection payload
+uv run python testbed.py --model openai/gpt-4.1 \
+  --user-file payload.txt --user-file-desc "Red team jailbreak attempt"
+
+# Multiple files with descriptions (matched by position)
+uv run python testbed.py --model openai/gpt-4.1 \
+  --user-file img.png --user-file-desc "Hidden text in corner" \
+  --user-file attack.txt --user-file-desc "Authority escalation payload"
+```
+
+Image and PDF user files are sent through the multimodal path. Text files are
+read and their contents used as injection payloads in text contexts.
+
 ### Test a local Ollama model
 
 ```bash
@@ -185,8 +234,8 @@ independently without conversation history buildup.
 uv run python testbed.py --model ollama/llama3.2 --categories instruction_override
 
 # Remote Ollama
-OLLAMA_API_BASE=http://192.168.1.50:11434 \
-  uv run python testbed.py --model ollama/mistral --categories all
+uv run python testbed.py --model ollama/llama3.2 \
+  --api-base http://192.168.1.50:11434 --categories all
 ```
 
 ## Command-line reference
@@ -194,19 +243,27 @@ OLLAMA_API_BASE=http://192.168.1.50:11434 \
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--model` | (none) | LiteLLM model identifier (e.g. `openai/gpt-4.1`) |
+| `--api-key` | (from `.env`) | API key for the target model |
+| `--api-base` | (none) | Base URL for the target model (e.g. `http://host:11434`) |
 | `--target-url` | (none) | HTTP endpoint to test instead of a direct model |
 | `--categories` | `all` | Comma-separated category keys, or `all` |
 | `--contexts` | `document` | Injection contexts: `document`, `email`, `web` |
-| `--eval-model` | `openai/gpt-4.1-mini` | Model used for evaluating results |
+| `--eval-model` | `openai/gpt-4.1-mini` | Model used for initial evaluation |
 | `--eval-api-key` | (from `.env`) | API key for the evaluator model |
-| `--eval-api-base` | (from `.env`) | Base URL for the evaluator (e.g. `http://host:11434` for remote Ollama) |
+| `--eval-api-base` | (from `.env`) | Base URL for the evaluator |
+| `--review-model` | (same as eval) | Model used for reviewing evaluator verdicts |
+| `--review-api-base` | (same as eval) | Base URL for the reviewer model |
 | `--system-prompt` | "You are a helpful assistant." | System prompt for target |
 | `--max-per-cat` | `5` | Max payloads per category to run |
 | `--delay-seconds` | `0.0` | Seconds to wait between test attempts |
 | `--output-dir` | `reports` | Directory for generated reports |
-| `--checkpoint` / `--no-checkpoint` | `--checkpoint` | Print periodic progress updates (disable with `--no-checkpoint` for silent mode) |
+| `--checkpoint` / `--no-checkpoint` | `--checkpoint` | Print periodic progress updates |
 | `--checkpoint-interval` | `5.0` | Minutes between timed checkpoint messages |
-| `--api-key` | (from `.env`) | API key for the target model |
+| `--multimodal` | off | Include multimodal injection payloads |
+| `--mm-categories` | `all` | Multimodal categories (comma-separated or `all`) |
+| `--mm-contexts` | `describe` | Multimodal contexts: `describe`, `analyze_doc`, `extract` |
+| `--user-file` | (none) | User-supplied file for testing (repeatable) |
+| `--user-file-desc` | (none) | Description per user file (positional match) |
 | `--list-categories` | | List payload categories and exit |
 
 Either `--model` or `--target-url` is required (but not both).
@@ -216,10 +273,9 @@ Either `--model` or `--target-url` is required (but not both).
 By default the testbed prints progress every 10 tests and at timed intervals:
 
 ```
-  10/108 tests completed (9.3%) | 2 injected so far
-  20/108 tests completed (18.5%) | 5 injected so far
-  -- Checkpoint [25/108] (23.1%) | 6 injected | elapsed 300s --
-  30/108 tests completed (27.8%) | 8 injected so far
+  -- [10/108] (9.3%) | 2 injected | elapsed 120s --
+  -- [20/108] (18.5%) | 5 injected | elapsed 245s --
+  -- [30/108] (27.8%) | 8 injected | elapsed 370s --
 ```
 
 Use `--no-checkpoint` to suppress all progress output (silent mode), or
@@ -264,7 +320,7 @@ Reports are saved to `reports/` as markdown files with filenames like:
 Each report contains:
 - A summary table with overall injection success/resistance rates
 - Per-category breakdowns with individual payload results
-- Confidence scores and evidence from the evaluator agent
+- Confidence scores and evidence from the evaluator agent, plus reviewer reasoning
 - **Appendix A**: Commands used to run the testbed (and test applications if applicable)
 - **Appendix B**: Full prompts and responses for every test
 
@@ -310,14 +366,21 @@ details and custom system prompt testing.
 ## Architecture
 
 ```
-testbed.py                      Single-file application (~275 lines)
+testbed.py                      Single-file application (~400 lines)
   |
   |-- Target Agent              Model under test (user-specified)
-  |-- Evaluator Agent           Judges injection success (gpt-4.1-mini default)
+  |-- Evaluator Agent           Initial injection verdict (gpt-4.1-mini default)
+  |-- Reviewer Agent            Independent review, can override evaluator
   |
 skills/injection-payloads/
   |-- SKILL.md                  Skill docs and category reference
   |-- references/payloads.yaml  150 payloads across 18 categories
+  |
+skills/multimodal-payloads/
+  |-- SKILL.md                  Multimodal skill docs
+  |-- references/manifest.yaml  Image/PDF payload manifest
+  |-- references/images/        Hidden-text injection images (PNG)
+  |-- references/pdfs/          Injection PDFs (invisible text, hidden layers)
   |
 test-apps/
   |-- chat-completions/         Interactive CLI chat client
@@ -341,8 +404,13 @@ file and update the table in `skills/injection-payloads/SKILL.md`.
 **Add injection contexts**: Add a new entry to the `INJECTION_CONTEXTS` dict
 in `testbed.py`.
 
-**Change the evaluator**: Modify `EVALUATOR_INSTRUCTIONS` in `testbed.py` or
-pass a different model with `--eval-model`.
+**Add multimodal payloads**: Add entries to
+`skills/multimodal-payloads/references/manifest.yaml` and place the
+corresponding image or PDF files in the `references/` subdirectories.
+
+**Change the evaluator or reviewer**: Modify `EVALUATOR_INSTRUCTIONS` or
+`REVIEWER_INSTRUCTIONS` in `testbed.py`, or pass different models with
+`--eval-model` and `--review-model`.
 
 ## License
 

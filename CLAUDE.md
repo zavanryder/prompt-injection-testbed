@@ -10,7 +10,7 @@ uv run python testbed.py --model openai/gpt-4.1 --categories all
 
 ## Project structure
 
-- `testbed.py` is the entire application. Keep it under 300 lines.
+- `testbed.py` is the entire application. Keep it under 400 lines.
 - Payloads live in `skills/injection-payloads/references/payloads.yaml` -- never
   hardcode them in Python files.
 - Reports are generated into `reports/` as markdown.

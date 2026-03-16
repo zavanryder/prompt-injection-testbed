@@ -8,6 +8,8 @@ dependencies = [
     "python-dotenv",
     "pyyaml",
     "httpx",
+    "pillow>=12.1.1",
+    "fpdf2>=2.8.7",
 ]
 
 [project.scripts]
